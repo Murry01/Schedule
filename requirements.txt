@@ -1,0 +1,11 @@
+langchain
+langchain-openai
+langchain-chroma
+pydantic
+python-dotenv
+pandas
+tiktoken
+# Added for web service:
+fastapi
+uvicorn[standard]
+pydantic-settings

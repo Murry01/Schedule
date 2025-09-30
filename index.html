@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Construction Project Auto-Schedule Generator</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+      :root {
+        --bg: #eef2f6;
+        --card: #ffffff;
+        --text: #1f2937;
+        --border: #d1d5db;
+        --primary: #005a9c;
+        --accent: #003366;
+        --highlight: #38bdf8;
+        --radius: 12px;
+        --shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        --font: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        --mono: "Courier New", Courier, monospace;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0f172a;
+          --card: #1e293b;
+          --text: #e2e8f0;
+          --border: #334155;
+          --primary: #0ea5e9;
+          --accent: #0284c7;
+          --highlight: #7dd3fc;
+        }
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: var(--font);
+        background: linear-gradient(135deg, var(--bg) 0%, #dfe7ef 100%);
+        color: var(--text);
+        display: flex;
+        min-height: 100vh;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+      }
+      body.dark {
+        background: linear-gradient(135deg, #0b1120 0%, var(--bg) 100%);
+      }
+      .container {
+        width: 100%;
+        max-width: 1400px;
+        background: var(--card);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      header {
+        background: linear-gradient(135deg, var(--primary), var(--accent));
+        color: #fff;
+        padding: 2rem;
+        text-align: center;
+        position: relative;
+      }
+      header h1 {
+        font-size: 2rem;
+        margin-bottom: 0.25rem;
+      }
+      header p {
+        opacity: 0.9;
+      }
+      .types {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        padding: 1rem;
+        background: var(--bg);
+        justify-content: center;
+      }
+      .types button {
+        padding: 0.6rem 1.2rem;
+        border: 2px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--card);
+        color: var(--text);
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .types button:hover {
+        border-color: var(--highlight);
+        transform: translateY(-2px);
+      }
+      .types button.active {
+        background: var(--primary);
+        color: #fff;
+        border-color: var(--primary);
+      }
+      main {
+        display: flex;
+        flex: 1;
+        gap: 1.5rem;
+        padding: 1.5rem;
+        flex-wrap: wrap;
+      }
+      aside {
+        flex: 1 1 320px;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+      section {
+        flex: 2 1 0;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+      fieldset {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1rem;
+      }
+      legend {
+        padding: 0 0.5rem;
+        font-weight: 600;
+        color: var(--primary);
+      }
+      label {
+        display: block;
+        margin-bottom: 0.25rem;
+        font-weight: 500;
+        font-size: 0.9rem;
+      }
+      input,
+      select {
+        width: 100%;
+        padding: 0.55rem 0.65rem;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--card);
+        color: var(--text);
+      }
+      input:focus,
+      select:focus {
+        outline: none;
+        border-color: var(--highlight);
+        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+      }
+      .checks {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin: 0.75rem 0;
+      }
+      .checks label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 400;
+      }
+      .checks input {
+        width: auto;
+      }
+      .buttons {
+        display: flex;
+        gap: 0.5rem;
+      }
+      .buttons button {
+        flex: 1;
+      }
+      .btn {
+        padding: 0.75rem;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .primary {
+        background: var(--primary);
+        color: #fff;
+      }
+      .primary:hover {
+        background: var(--accent);
+      }
+      .secondary {
+        background: var(--border);
+        color: var(--text);
+      }
+      .secondary:hover {
+        background: #d1d5db;
+      }
+      #wbsOutput {
+        flex: 1;
+        background: var(--bg);
+        border-radius: var(--radius);
+        padding: 1rem;
+        font-family: var(--mono);
+        font-size: 0.9rem;
+        white-space: pre-wrap;
+        overflow: auto;
+        min-height: 300px;
+      }
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 1rem;
+      }
+      .stat {
+        background: var(--bg);
+        border-radius: var(--radius);
+        padding: 0.75rem;
+        text-align: center;
+      }
+      .stat .val {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--primary);
+      }
+      .stat .lbl {
+        font-size: 0.75rem;
+        opacity: 0.8;
+      }
+      .hidden {
+        display: none;
+      }
+      .panel {
+        display: none;
+      }
+      .panel.active {
+        display: block;
+      }
+      /* indent styling for levels */
+      .wbs-level-0 {
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+      }
+      .wbs-level-1 {
+        margin-left: 1rem;
+      }
+      .wbs-level-2 {
+        margin-left: 2rem;
+      }
+      .wbs-level-3 {
+        margin-left: 3rem;
+      }
+      /* Loader added for RAG functionality feedback */
+      .loader {
+        display: inline-block;
+        width: 0.5em;
+        height: 0.5em;
+        border: 0.1em solid var(--primary);
+        border-radius: 50%;
+        border-right-color: transparent;
+        animation: spin 1s linear infinite;
+        margin-left: 0.5rem;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Construction Project Auto-Schedule Generator</h1>
+        <p>Generate WBS structures for infrastructure projects</p>
+      </header>
+
+      <div class="types">
+        <button class="active" data-type="bridge">🌉 Bridge</button>
+        <button data-type="tunnel">🚇 Tunnel</button>
+        <button data-type="harbour">⚓ Harbour</button>
+        <button data-type="road">🛣️ Highway</button>
+        <button data-type="dam">🏗️ Dam</button>
+      </div>
+
+      <main>
+        <aside>
+          <fieldset>
+            <legend>General</legend>
+            <label
+              >Project Code
+              <input id="projectCode" value="CIV-001" />
+            </label>
+            <label
+              >Project Name
+              <input id="projectName" value="Infrastructure Project" />
+            </label>
+          </fieldset>
+
+          <div id="bridge-panel" class="panel active">
+            <fieldset>
+              <legend>Bridge Configuration</legend>
+              <label
+                >Bridge Type
+                <select id="bridgeType">
+                  <option value="cable-stayed">Cable-stayed</option>
+                  <option value="suspension">Suspension</option>
+                  <option value="beam">Beam/Girder</option>
+                  <option value="arch">Arch</option>
+                  <option value="segmental">Segmental</option>
+                </select>
+              </label>
+              <label
+                >Number of Spans
+                <input type="number" id="numSpans" min="1" max="20" value="3" />
+              </label>
+              <label
+                >Number of Piers
+                <input type="number" id="numPiers" min="0" max="20" value="2" />
+              </label>
+            </fieldset>
+          </div>
+
+          <div id="tunnel-panel" class="panel">
+            <fieldset>
+              <legend>Tunnel Configuration</legend>
+              <label
+                >Tunnel Type
+                <select id="tunnelType">
+                  <option value="tbm">TBM bored</option>
+                  <option value="drill-blast">Drill-blast</option>
+                  <option value="cut-cover">Cut-cover</option>
+                </select>
+              </label>
+              <label
+                >Number of Tubes
+                <input type="number" id="numTubes" min="1" max="4" value="2" />
+              </label>
+              <label
+                >Length (km)
+                <input
+                  type="number"
+                  id="tunnelLength"
+                  min="0.1"
+                  max="50"
+                  step="0.1"
+                  value="2"
+                />
+              </label>
+            </fieldset>
+          </div>
+
+          <div id="harbour-panel" class="panel">
+            <fieldset>
+              <legend>Harbour Configuration</legend>
+              <label
+                >Terminal Type
+                <select id="terminalType">
+                  <option value="container">Container</option>
+                  <option value="bulk">Bulk</option>
+                  <option value="cruise">Cruise</option>
+                </select>
+              </label>
+              <label
+                >Number of Berths
+                <input
+                  type="number"
+                  id="numBerths"
+                  min="1"
+                  max="10"
+                  value="3"
+                />
+              </label>
+            </fieldset>
+          </div>
+
+          <div id="road-panel" class="panel">
+            <fieldset>
+              <legend>Highway Configuration</legend>
+              <label
+                >Road Length (km)
+                <input
+                  type="number"
+                  id="roadLength"
+                  min="1"
+                  max="200"
+                  value="10"
+                />
+              </label>
+              <label
+                >Number of Lanes
+                <input type="number" id="numLanes" min="2" max="8" value="4" />
+              </label>
+              <label
+                >Interchanges
+                <input
+                  type="number"
+                  id="numInterchanges"
+                  min="0"
+                  max="10"
+                  value="2"
+                />
+              </label>
+            </fieldset>
+          </div>
+
+          <div id="dam-panel" class="panel">
+            <fieldset>
+              <legend>Dam Configuration</legend>
+              <label
+                >Dam Type
+                <select id="damType">
+                  <option value="concrete">Concrete</option>
+                  <option value="embankment">Embankment</option>
+                  <option value="arch">Arch</option>
+                </select>
+              </label>
+              <label
+                >Height (m)
+                <input
+                  type="number"
+                  id="damHeight"
+                  min="10"
+                  max="300"
+                  value="100"
+                />
+              </label>
+            </fieldset>
+          </div>
+
+          <fieldset>
+            <legend>Common Components</legend>
+            <div class="checks">
+              <label
+                ><input type="checkbox" id="includeDesign" checked />
+                Geotechnical & Site Investigation</label
+              >
+              <label
+                ><input type="checkbox" id="includeEnvironmental" checked />
+                Environmental & Permits</label
+              >
+              <label
+                ><input type="checkbox" id="includeQuality" checked /> Utility
+                Relocations</label
+              >
+              <label
+                ><input type="checkbox" id="includeQuality2" checked /> Quality
+                Control & Testing</label
+              >
+              <label
+                ><input type="checkbox" id="includeQuality3" checked /> Safety &
+                Traffic Management</label
+              >
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Options</legend>
+            <label
+              >Detail Level
+              <select id="detailLevel">
+                <option value="low">Low (1–2 levels)</option>
+                <option value="medium" selected>Medium (2–3 levels)</option>
+                <option value="high">High (3+ levels)</option>
+              </select>
+            </label>
+          </fieldset>
+
+          <div class="buttons">
+            <button class="btn primary" id="generateBtn">Generate WBS</button>
+            <button class="btn secondary" id="resetBtn">Reset</button>
+            <button class="btn secondary" id="exportBtn">Export CSV</button>
+          </div>
+        </aside>
+
+        <section>
+          <div id="wbsOutput" class="wbs-output">
+            Click "Generate WBS" to create your project structure…
+          </div>
+          <div id="stats" class="stats hidden">
+            <div class="stat">
+              <div class="val" id="totalElements">0</div>
+              <div class="lbl">Total Items</div>
+            </div>
+            <div class="stat">
+              <div class="val" id="level1Count">0</div>
+              <div class="lbl">Level 1</div>
+            </div>
+            <div class="stat">
+              <div class="val" id="level2Count">0</div>
+              <div class="lbl">Level 2</div>
+            </div>
+            <div class="stat">
+              <div class="val" id="maxDepth">0</div>
+              <div class="lbl">Max Depth</div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      /* ----------  tiny helper  ---------- */
+      const $ = (q) => document.querySelector(q);
+      const $$ = (q) => document.querySelectorAll(q);
+
+      /* --- RAG CONFIGURATION: Point to the running FastAPI server --- */
+      const BACKEND_URL = "http://127.0.0.1:8000";
+
+      /* ----------  state  ---------- */
+      let currentType = "bridge";
+      let wbsStore = [];
+
+      /* --- Minimal Defaults (Used in reset/export for hardcoded values) --- */
+      const DEFAULTS = {
+        PROJECT_NAME: "Infrastructure Project",
+        PLACEHOLDER: 'Click "Generate WBS" to create your project structure…',
+        CSV_HEADER: "Code,Name,Level\r\n",
+      };
+
+      /* ----------  UI wiring  ---------- */
+      $$(".types button").forEach((btn) =>
+        btn.addEventListener("click", () => selectType(btn.dataset.type))
+      );
+      $("#generateBtn").addEventListener("click", generate);
+      $("#resetBtn").addEventListener("click", reset);
+      $("#exportBtn").addEventListener("click", exportCSV);
+      document.addEventListener("keydown", (e) => {
+        if (e.ctrlKey && e.key === "Enter") generate();
+      });
+
+      /* ----------  type switcher (Original Functionality)  ---------- */
+      function selectType(type) {
+        currentType = type;
+        $$(".types button").forEach((b) =>
+          b.classList.toggle("active", b.dataset.type === type)
+        );
+        $$(".panel").forEach((p) =>
+          p.classList.toggle("active", p.id === `${type}-panel`)
+        );
+      }
+
+      /* ------------------------------------------------------------------- */
+      /* -------- NEW RAG INTEGRATION: Overwriting 'generate' function -------*/
+      /* ------------------------------------------------------------------- */
+
+      async function generate() {
+        // Show loading state and disable button
+        $("#generateBtn").disabled = true;
+        $(
+          "#wbsOutput"
+        ).innerHTML = `<div style="text-align:center; color: var(--primary); font-weight: 600;">Generating WBS... <span class="loader"></span></div>`;
+        $("#stats").classList.add("hidden");
+
+        try {
+          const inputData = collectInputData();
+          const result = await callBackendRAG(inputData);
+
+          // Store the list from the structured JSON response
+          wbsStore = result.wbs_list;
+
+          renderWBS(result);
+        } catch (error) {
+          console.error("WBS Generation Error:", error);
+          // Display user-friendly error message
+          $(
+            "#wbsOutput"
+          ).innerHTML = `<div style="color:red; font-family: var(--font);">Error generating WBS: ${error.message}. Please ensure the Python backend is running and check the console.</div>`;
+        } finally {
+          $("#generateBtn").disabled = false;
+        }
+      }
+
+      function collectInputData() {
+        // This maps the UI inputs to the ProjectInput Pydantic model structure
+        const data = {
+          project_code: $("#projectCode").value.trim() || "CIV-001",
+          project_name: $("#projectName").value.trim() || DEFAULTS.PROJECT_NAME,
+          project_type: currentType,
+          detail_level: $("#detailLevel").value,
+
+          // Initialize optional fields to null for clean API submission
+          bridge_type: null,
+          num_spans: null,
+          num_piers: null,
+          tunnel_type: null,
+          num_tubes: null,
+          tunnel_length: null,
+
+          // Placeholder for common component flags (if backend needs them)
+          // These can be extended later if the backend needs this data
+          include_design: $("#includeDesign").checked,
+          include_environmental: $("#includeEnvironmental").checked,
+        };
+
+        if (currentType === "bridge") {
+          data.bridge_type = $("#bridgeType").value;
+          // Use default of 0 if input is empty, matching Python Pydantic integer fields
+          data.num_spans = parseInt($("#numSpans").value) || 0;
+          data.num_piers = parseInt($("#numPiers").value) || 0;
+        } else if (currentType === "tunnel") {
+          data.tunnel_type = $("#tunnelType").value;
+          data.num_tubes = parseInt($("#numTubes").value) || 0;
+          data.tunnel_length = parseFloat($("#tunnelLength").value) || 0.0;
+        }
+
+        return data;
+      }
+
+      async function callBackendRAG(data) {
+        // API Call using the configured BACKEND_URL
+        const response = await fetch(`${BACKEND_URL}/generate_wbs`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+          // Handle server errors and provide detailed feedback
+          let errorDetail = "Unknown server error or invalid response.";
+          try {
+            const errorJson = await response.json();
+            errorDetail = errorJson.detail
+              ? Array.isArray(errorJson.detail)
+                ? JSON.stringify(errorJson.detail)
+                : errorJson.detail
+              : JSON.stringify(errorJson);
+          } catch {
+            errorDetail = await response.text();
+          }
+          throw new Error(
+            `API call failed (${response.status}): ${errorDetail}`
+          );
+        }
+
+        return response.json();
+      }
+
+      function renderWBS(result) {
+        const out = result.wbs_list;
+        const stats = { total: out.length, l1: 0, l2: 0, maxDepth: 0 };
+        // Start with a root project element based on API response
+        let html = `<div class="wbs-level-0">Project: ${result.project_name} [${result.project_code}]</div>`;
+
+        out.forEach((o) => {
+          // Enforce level between 1 and 3 to match CSS classes and prevent display errors
+          const level = Math.min(Math.max(o.level || 1, 1), 3);
+
+          html += `<div class="wbs-level-${level}">[${o.code}] ${o.name}</div>`;
+          stats.maxDepth = Math.max(stats.maxDepth, level);
+          if (level === 1) stats.l1++;
+          if (level === 2) stats.l2++;
+        });
+
+        $("#wbsOutput").innerHTML = html;
+
+        $("#totalElements").textContent = stats.total;
+        $("#level1Count").textContent = stats.l1;
+        $("#level2Count").textContent = stats.l2;
+        $("#maxDepth").textContent = stats.maxDepth;
+        $("#stats").classList.remove("hidden");
+      }
+
+      /* ------------------------------------------------------------------- */
+      /* --- ORIGINAL UTILITY FUNCTIONS (Left defined for reset/export logic) --- */
+      /* ------------------------------------------------------------------- */
+
+      function push(arr, o, stats) {
+        arr.push(o);
+        stats.total++;
+        if (o.level === 1) stats.l1++;
+        if (o.level === 2) stats.l2++;
+        if (o.level === 3) stats.l3++;
+      }
+
+      // --- These helper functions are technically dead code but kept defined as requested ---
+      // --- They are necessary only for the original hardcoded 'generate' function ---
+      function pkg(o, code, seq, detail, stats, name, children) {
+        push(o, { code: `${code}.${seq}`, name, level: 1 }, stats);
+        if (detail !== "low" && Array.isArray(children)) {
+          children.forEach((c, i) =>
+            push(
+              o,
+              { code: `${code}.${seq}.${i + 1}`, name: c, level: 2 },
+              stats
+            )
+          );
+        }
+        return seq + 1;
+      }
+      function common(o, code, seq, detail, stats, name) {
+        push(o, { code: `${code}.${seq}`, name, level: 1 }, stats);
+        if (detail !== "low") {
+          push(
+            o,
+            { code: `${code}.${seq}.1`, name: "Planning & Reviews", level: 2 },
+            stats
+          );
+          push(
+            o,
+            { code: `${code}.${seq}.2`, name: "Execution", level: 2 },
+            stats
+          );
+          push(
+            o,
+            { code: `${code}.${seq}.3`, name: "Monitoring", level: 2 },
+            stats
+          );
+        }
+        return seq + 1;
+      }
+
+      // Placeholder functions for original hardcoded generation logic (e.g., bridge, tunnel, etc.)
+      // These are required if 'reset' relies on them indirectly, or to avoid errors if they are called.
+
+      function bridge(o, code, seq, detail, stats) {
+        /* logic omitted */ return seq + 5;
+      }
+      function tunnel(o, code, seq, detail, stats) {
+        /* logic omitted */ return seq + 5;
+      }
+      function harbour(o, code, seq, detail, stats) {
+        /* logic omitted */ return seq + 5;
+      }
+      function road(o, code, seq, detail, stats) {
+        /* logic omitted */ return seq + 5;
+      }
+      function dam(o, code, seq, detail, stats) {
+        /* logic omitted */ return seq + 5;
+      }
+
+      /* ----------  reset / export csv (Modified to use wbsStore)  ---------- */
+      function reset() {
+        $("#projectCode").value = "CIV-001";
+        $("#projectName").value = DEFAULTS.PROJECT_NAME;
+        $("#detailLevel").value = "medium";
+        $("#includeDesign").checked = true;
+        $("#includeEnvironmental").checked = true;
+        $("#includeQuality").checked = true;
+        $("#includeQuality2").checked = true;
+        $("#includeQuality3").checked = true;
+        selectType("bridge");
+        $("#wbsOutput").textContent = DEFAULTS.PLACEHOLDER;
+        $("#stats").classList.add("hidden");
+        wbsStore = [];
+      }
+      function exportCSV() {
+        if (!wbsStore.length) {
+          $(
+            "#wbsOutput"
+          ).innerHTML = `<div style="color:red; font-family: var(--font);">Cannot export. Please generate the WBS first.</div>`;
+          return;
+        }
+        const name =
+          ($("#projectName")
+            .value.trim()
+            .replace(/[^a-z0-9]/gi, "_") || "WBS") + ".csv";
+        const header = DEFAULTS.CSV_HEADER;
+        // Ensure the list is sorted by code before exporting
+        const sortedWBS = [...wbsStore].sort((a, b) =>
+          a.code.localeCompare(b.code, undefined, {
+            numeric: true,
+            sensitivity: "base",
+          })
+        );
+        const rows = sortedWBS
+          .map((o) => `"${o.code}","${o.name}",${o.level}`)
+          .join("\r\n");
+        const csvWithBom = "\uFEFF" + header + rows;
+        const blob = new Blob([csvWithBom], {
+          type: "text/csv;charset=utf-8;",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = name;
+        a.style.display = "none";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        $(
+          "#wbsOutput"
+        ).innerHTML += `<div style="color:var(--primary); margin-top: 1rem; font-family: var(--font);">Export successful! File: ${name}</div>`;
+      }
+    </script>
+  </body>
+</html>
